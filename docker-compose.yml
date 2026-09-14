@@ -1,0 +1,10 @@
+services:
+  ssrf-lab:
+    build: .
+    container_name: ssrf-lab
+    ports:
+      - "5092:5092"
+    environment:
+      LAB_HOST: "0.0.0.0"
+      LAB_RESET: "1"
+    restart: unless-stopped

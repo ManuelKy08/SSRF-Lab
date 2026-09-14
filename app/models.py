@@ -47,8 +47,10 @@ def init_db():
 def seed():
     init_db()
     with conn() as c:
+        if os.environ.get('LAB_RESET') == '1':
+            c.execute('DELETE FROM settings')
         for k in ('s1', 's2', 's3', 's4'):
-            c.execute('INSERT OR IGNORE INTO settings(key,vulnerable) VALUES(?,1)', (k,))
+            c.execute('INSERT OR REPLACE INTO settings(key,vulnerable) VALUES(?,1)', (k,))
 
 
 def setting(key):

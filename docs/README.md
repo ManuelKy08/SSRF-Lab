@@ -25,3 +25,11 @@ Provider internal (5091) memegang flag `SSRF-LAB{Flag_SSRF_Menusuk_Internal_Serv
 ```
 python -m app.main      # dari folder lab — start internal 5091 + lab 5092
 ```
+
+### Docker (rekomendasi — versi library dijamin konsisten)
+```bash
+docker compose up -d --build     # lab → http://127.0.0.1:5092
+docker compose down              # stop
+docker compose down -v           # stop + reset database
+```
+Dengan Docker, port internal 5091 **tidak dipublish** ke host → `http://127.0.0.1:5091/...` cuma bisa dijangkau SSRF dari dalam. State selalu di-reset ke RENTAN saat container start. Instruksi lengkap: lihat **README.md** di root repo.

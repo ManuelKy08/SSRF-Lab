@@ -1,8 +1,10 @@
+import os
 import threading
 import webbrowser
 
 PORT = 5092
 INTERNAL_PORT = 5091
+LAB_HOST = os.environ.get('LAB_HOST', '127.0.0.1')
 
 
 def main():
@@ -19,7 +21,7 @@ def main():
     t.start()
 
     threading.Timer(1.2, lambda: webbrowser.open(f'http://127.0.0.1:{PORT}/')).start()
-    create_app().run(host='127.0.0.1', port=PORT, debug=False, use_reloader=False)
+    create_app().run(host=LAB_HOST, port=PORT, debug=False, use_reloader=False)
 
 
 if __name__ == '__main__':
