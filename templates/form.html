@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}SSRF Lab — {{ title }}{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="sc-title">{{ title }}</div>
+  <div class="sc-desc">{{ desc }}</div>
+  <div class="pill {{ 'pill-green' if mode else 'pill-red' }}" style="margin:8px 0">
+    Mode: {{ 'RENTAN (SSRF terbuka)' if mode else 'FIXED (da dilindungi)' }}
+  </div>
+  <form method="get" class="url-form">
+    <input type="text" name="url" value="{{ request.args.get('url','') }}"
+           placeholder="https://gambar.contoh.com/banner.png | http://127.0.0.1:5091/internal/meta | file:///C:/…/secret.txt"
+           class="url-input">
+    <button type="submit" class="btn-exe"><i class="fa-solid fa-play"></i> Kirim</button>
+  </form>
+  <div class="dim" style="margin-top:10px">Contoh payload: lihat <code>payloads/README.md</code>.</div>
+</div>
+{% endblock %}

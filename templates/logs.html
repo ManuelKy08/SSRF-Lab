@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <div class="sc-title">Log internal &amp; aktivitas</div>
+  {% if logs %}
+  <table class="log-table">
+    <tr><th>Waktu</th><th>Sumber</th><th>Pesan</th></tr>
+    {% for l in logs %}
+    <tr><td>{{ l.ts }}</td><td>{{ l.source }}</td><td>{{ l.msg }}</td></tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <div class="dim">Belum ada aktivitas.</div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}SSRF Lab — hasil{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="sc-title">{{ label }}</div>
+  <div class="pill {{ 'pill-red' if r.ok else 'pill-green' }}" style="margin:8px 0">
+    {{ '⚡ RENTAN — flag terbaca' if r.ok else '🛡️ TIDAK tembus (aman / diblokir)' }}
+  </div>
+  <div class="kv"><span>URL</span><code>{{ r.url }}</code></div>
+  <div class="kv"><span>Verdict filter</span><code>{{ r.verdict }}</code></div>
+  <div class="kv"><span>Deskripsi</span><code>{{ r.desc }}</code></div>
+  <div class="kv"><span>HTTP</span><code>{{ r.status }} · final: {{ r.final_url }}</code></div>
+  <div class="kv"><span>Body</span>
+    <pre class="poc-out">{{ r.body or '(kosong)' }}</pre>
+  </div>
+  <p><a class="btn-link" href="/svc/{{ page }}">← kembali</a></p>
+</div>
+{% endblock %}
