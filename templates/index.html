@@ -3,27 +3,27 @@
 <div class="card hero">
   <div class="hero-box">
     <div class="hero-title">SSRF Lab — cara unik menembus "internal service"</div>
-    <div class="hero-sub">4 vektor Server-Side Request Forgery yang real & jarang diangkat: <b style="color:var(--purple)">image proxy</b>, <b style="color:var(--purple)">file:// local read</b>, <b style="color:var(--purple)">redirect-bypass denylist IP</b>, dan <b style="color:var(--purple)">webhook callback SSRF</b>.</div>
+    <div class="hero-sub">5 vektor Server-Side Request Forgery yang real & jarang diangkat: <b style="color:var(--purple)">image proxy</b>, <b style="color:var(--purple)">file:// lokal read</b>, <b style="color:var(--purple)">redirect-bypass denylist IP</b>, <b style="color:var(--purple)">webhook callback SSRF</b>, dan <b style="color:var(--purple)">cloud metadata 169.254.169.254</b>.</div>
     <div class="hero-meta">
       <span class="pill pill-green">Internal service → http://127.0.0.1:5091</span>
-      <span class="pill pill-red">Flag → <b>SSRF-LAB{…}</b></span>
+      <span class="pill pill-red">Cloud metadata → <b>169.254.169.254</b> (simulasi)</span>
       <span class="pill pill-blue">Semua fetch dilakukan SERVER, bukan browser</span>
     </div>
     <div class="session-row">
       <span>External lab: <b class="cyan">http://127.0.0.1:5092</b></span>
-      <span>Internal: <b class="green">/internal/flag · /internal/meta</b></span>
+      <span>Internal: <b class="green">/internal/flag · /internal/meta · /latest/meta-data/…</b></span>
     </div>
   </div>
 </div>
 
-{% for s in ['s1','s2','s3','s4'] %}
+{% for s in ['s1','s2','s3','s4','s5'] %}
 {% set m = modes[s] %}
 <div class="card sc-card" id="sc-{{ s }}">
   <div class="sc-head">
     <div class="sc-badge s{{ s }}">{{ loop.index }}</div>
     <div class="sc-info">
-      <div class="sc-title">{{ {'s1':'1️⃣ Image proxy mem-fetch URL TANPA validasi host → SSRF polos ke internal','s2':'2️⃣ Fetch "avatar dari URL" tanpa cek scheme → baca file lokal (file://)','s3':'3️⃣ Denylist IP dilewati oleh redirect + domain attacker → hop ke internal','s4':'4️⃣ Callback/webhook URL tidak divalidasi → server meng-call endpoint internal'}[s] }}</div>
-      <div class="sc-desc">{{ {'s1':'CDN/bandwidth-saver meminta server mengambil URL yg dikirim user supaya bisa diproses (resize, cek ukuran, screenshot). Tanpa cek host, attacker tinggal arahkan ke http://127.0.0.1:5091/internal/flag.','s2':'Register avatar yang diimplementasi sebagai fetch-from-URL di server. Kalau scheme tidak di-filter, file:// membuka file lokal — attacker baca secret/credential server.','s3':'Fetcher memblokir 127.0.0.1/localhost secara literal, TAPI tetap mengikuti redirect. Attacker memakai domain sendiri (r.evil → loopback di lab, DNS attacker asli di dunia nyata) yg me-302 ke internal → loopback tercapai.','s4':'Input "webhook URL" yg dipanggil server saat trigger. Validasi host tidak ada → server men-DO-RING internal metadata/flag, responnya tampil di panel admin.'}[s] }}</div>
+      <div class="sc-title">{{ {'s1':'1️⃣ Image proxy mem-fetch URL TANPA validasi host → SSRF polos ke internal','s2':'2️⃣ Fetch "avatar dari URL" tanpa cek scheme → baca file lokal (file://)','s3':'3️⃣ Denylist IP dilewati oleh redirect + domain attacker → hop ke internal','s4':'4️⃣ Callback/webhook URL tidak divalidasi → server meng-call endpoint internal','s5':'5️⃣ Cloud metadata SSRF — filter lupa 169.254.0.0/16 → IAM credentials bocor'}[s] }}</div>
+      <div class="sc-desc">{{ {'s1':'CDN/bandwidth-saver meminta server mengambil URL yg dikirim user supaya bisa diproses (resize, cek ukuran, screenshot). Tanpa cek host, attacker tinggal arahkan ke http://127.0.0.1:5091/internal/flag.','s2':'Register avatar yang diimplementasi sebagai fetch-from-URL di server. Kalau scheme tidak di-filter, file:// membuka file lokal — attacker baca secret/credential server.','s3':'Fetcher memblokir 127.0.0.1/localhost secara literal, TAPI tetap mengikuti redirect. Attacker memakai domain sendiri (r.evil → loopback di lab, DNS attacker asli di dunia nyata) yg me-302 ke internal → loopback tercapai.','s4':'Input "webhook URL" yg dipanggil server saat trigger. Validasi host tidak ada → server men-DO-RING internal metadata/flag, responnya tampil di panel admin.','s5':'Endpoint internal di cloud biasa diakses lewat 169.254.169.254 (link-local metadata). Filter lama cuma memblokir RFC1918 + loopback → 169.254.0.0/16 lolos → attacker tarik IAM credentials &amp; flag (real: GCP/AWS metadata SSRF, $25k).'}[s] }}</div>
     </div>
     <button class="toggle {{ 'vuln' if m else 'fixed' }}" data-sc="{{ s }}">
       <i class="fa-solid {{ 'fa-bomb' if m else 'fa-shield' }}"></i> {{ 'RENTAN' if m else 'FIXED' }}
@@ -32,7 +32,7 @@
   <div class="sc-body">
     <div class="poc-actions">
       <button class="btn-run" data-poc="{{ s }}"><i class="fa-solid fa-radiation"></i> Jalankan Exploit</button>
-      <a class="btn-link" href="/svc/{{ {'s1':'check-img','s2':'avatar','s3':'ping','s4':'webhook'}[s] }}"><i class="fa-solid fa-wand-magic-sparkles"></i> Buka Fitur (manual)</a>
+      <a class="btn-link" href="/svc/{{ {'s1':'check-img','s2':'avatar','s3':'ping','s4':'webhook','s5':'meta'}[s] }}"><i class="fa-solid fa-wand-magic-sparkles"></i> Buka Fitur (manual)</a>
     </div>
     <pre class="poc-out" id="out-{{ s }}"><span class="dim">▶ klik "Jalankan Exploit" — jejak tercatat di Logs.</span></pre>
   </div>

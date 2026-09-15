@@ -1,6 +1,6 @@
 # SSRF-Lab
 
-Laboratorium **Server-Side Request Forgery (SSRF)** dengan **4 vektor kerentanan yang jarang diangkat**, masing-masing disusun dari kasus nyata di program Bug Bounty besar. Semua eksekusi exploit dilakukan **oleh server** (bukan browser), biar attacker path-nya realistis.
+Laboratorium **Server-Side Request Forgery (SSRF)** dengan **5 vektor kerentanan yang jarang diangkat**, masing-masing disusun dari kasus nyata di program Bug Bounty besar. Semua eksekusi exploit dilakukan **oleh server** (bukan browser), biar attacker path-nya realistis.
 
 > 🔬 Lab lokal / Docker-only — jangan pernah di-deploy ke publik.
 
@@ -12,7 +12,7 @@ Setiap skenario bisa di-switch satu tombol:
 - **RENTAN** (default) → kode rawan seperti di produksi yang belum di-patch.
 - **FIXED** → versi yang sudah menerapkan mitigasi beneran (jadi pembanding).
 
-## 🧨 4 Vektor Unik
+## 🧨 5 Vektor Unik
 
 | # | Vektor | Kerentanan | Analog real (BBP) |
 |---|--------|------------|-------------------|
@@ -20,6 +20,7 @@ Setiap skenario bisa di-switch satu tombol:
 | 2 | **Avatar dari URL** (register pakai URL) | Scheme tidak difilter → **`file://` local file read** (credential + flag) | SSRF → arbitrary file read |
 | 3 | **Content checker** | Denylist IP literal lenyap oleh **redirect + domain attacker** (`r.evil` → loopback) | Redirect-based filter bypass |
 | 4 | **Webhook endpoint** | URL callback tak divalidasi → server **men-DO-RING** internal, respon bocor | SSRF via webhook/callback parameter |
+| 5 | **Cloud metadata reader** | Filter *legacy* lupa blokir **`169.254.0.0/16`** (link-local) → **IAM credentials** bocor | GCP/AWS metadata SSRF (mis. report $25k) |
 
 **Target internal:** service kedua (port 5091) yang hanya bisa dijangkau dari dalam (di Docker, port internal **tidak** dipublish ke host — jadi SSRF adalah *satu-satunya* jalan masuk).
 

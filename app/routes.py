@@ -12,6 +12,12 @@ bp = Blueprint('lab', __name__)
 PRIVATE_NETS = ['127.0.0.1', '127.0.0.0/8', '0.0.0.0', '::1', '10.0.0.0/8',
                 '172.16.0.0/12', '192.168.0.0/16', '169.254.0.0/16']
 
+# filter "legacy" s5: cuma RFC1918 + loopback — TANPA 169.254.0.0/16 (link-local / metadata)
+LEGACY_NETS = ['127.0.0.1', '127.0.0.0/8', '0.0.0.0', '::1', '10.0.0.0/8',
+               '172.16.0.0/12', '192.168.0.0/16']
+
+META_HOST = '169.254.169.254'
+
 LAB_DNS = {'r.evil': '127.0.0.1'}
 
 
@@ -40,6 +46,15 @@ def _is_private(host_ip):
         return any(ip in ipaddress.ip_network(n) for n in PRIVATE_NETS if '/' in n) \
             or host_ip in ('127.0.0.1', '::1', '0.0.0.0')
     except Exception as e:
+        return False
+
+
+def _is_private_legacy(host_ip):
+    try:
+        ip = ipaddress.ip_address(host_ip.strip('[]'))
+        return any(ip in ipaddress.ip_network(n) for n in LEGACY_NETS if '/' in n) \
+            or host_ip in ('127.0.0.1', '::1', '0.0.0.0')
+    except Exception:
         return False
 
 
@@ -179,7 +194,31 @@ def _check_s4(url):
     return _fetch_outcome(url, verd, raw, 'host publik https')
 
 
-CHECKS = {'s1': _check_s1, 's2': _check_s2, 's3': _check_s3, 's4': _check_s4}
+def _check_s5(url):
+    host = _host_name(url)
+    if setting('s5'):
+        verd = 'filter LEGACY: cuma blokir RFC1918 + loopback — LUPA 169.254.0.0/16 (link-local)'
+        if host != META_HOST:
+            return {'url': url, 'verdict': verd, 'ok': False,
+                    'body': f'BLOCKED: {host} bukan endpoint metadata (butuh {META_HOST}).',
+                    'status': '-', 'final_url': url, 'desc': 'target bukan metadata IP'}
+        # 169.254.169.254 luput dari filter lama → route-kan ke metadata internal (simulasi loopback)
+        p = urllib.parse.urlparse(url)
+        connect_url = urllib.parse.urlunparse(p._replace(netloc='127.0.0.1:5091'))
+        raw = fetch_raw(connect_url, max_bytes=1500)
+        return _fetch_outcome(url, verd, raw, 'fetch 169.254.169.254 tanpa keblokir')
+    verd = 'fix: 169.254.0.0/16 (link-local/cloud metadata) ikut diblokir'
+    ip = resolve_host(host)
+    if host == META_HOST or (ip and _is_private(ip)):
+        return {'url': url, 'verdict': verd, 'ok': False,
+                'body': f'BLOCKED: {host} ({ip}) link-local/cloud metadata — akses ditolak.',
+                'status': '-', 'final_url': url, 'desc': 'metadata + link-local diblokir'}
+    raw = fetch_raw(url)
+    return _fetch_outcome(url, verd, raw, 'host selain metadata')
+
+
+CHECKS = {'s1': _check_s1, 's2': _check_s2, 's3': _check_s3, 's4': _check_s4,
+          's5': _check_s5}
 
 
 # ---------- pages ----------
@@ -238,6 +277,17 @@ def page_webhook():
                            desc='Daftarkan URL callback/webhook yang dipanggil server. Admin melihat responnya di panel.')
 
 
+@bp.route('/svc/meta')
+def page_meta():
+    mode = setting('s5')
+    if request.args.get('url'):
+        return render_template('result.html', page='meta', label='Cloud metadata reader',
+                               mode=mode, r=_check_s5(request.args['url']))
+    return render_template('form.html', page='meta', title='Cloud metadata reader',
+                           mode=mode, action='/svc/meta',
+                           desc='Fitur "grep URL" khusus konten yang dikirim — dipakai tooling di dalam cloud.')
+
+
 @bp.route('/api/state')
 def api_state():
     return jsonify(all_settings())
@@ -245,7 +295,7 @@ def api_state():
 
 @bp.route('/api/toggle/<sid>', methods=['POST'])
 def api_toggle(sid):
-    if sid not in ('s1', 's2', 's3', 's4'):
+    if sid not in ('s1', 's2', 's3', 's4', 's5'):
         return jsonify({'error': 'invalid id'}), 400
     data = request.get_json(silent=True) or {}
     if 'vulnerable' in data or 'on' in data:
@@ -291,7 +341,7 @@ def poc(sid):
                  '4. kamu me-302 → fetcher MENGIKUTI redirect → http://127.0.0.1:5091/internal/flag',
                  '5. Flag bocor meski filter awal "lolos".']
         r = _check_s3(url)
-    else:
+    elif sid == 's4':
         url = 'http://127.0.0.1:5091/internal/meta?ref=webhook'
         steps = ['1. Attacker daftarkan webhook URL → endpoint internal:',
                  '   ' + url,
@@ -299,6 +349,14 @@ def poc(sid):
                  '3. Respon internal (meta + secret) tersimpan & tampil.'
                  ' Operator yakin "webhook hanya ke dunia luar" ternyata bukan.']
         r = _check_s4(url)
+    else:
+        url = 'http://169.254.169.254/latest/meta-data/iam/security-credentials/'
+        steps = ['1. Attacker arahkan fitur ke cloud metadata (link-local):',
+                 '   ' + url,
+                 '2. Filter "legacy" cuma blokir RFC1918 + loopback — LUPA 169.254.0.0/16.',
+                 '3. Server yang jalan di cloud mengeksekusi request → datar metadata.',
+                 '4. IAM credentials (AccessKeyId/Secret) + flag bocor ke attacker.']
+        r = _check_s5(url)
     out = {'steps': steps, 'r': r, 'ok': r['ok']}
     body = r.get('body') or ''
     m = re.search(r'[A-Z0-9]+-LAB\{[^}]+\}', body)
